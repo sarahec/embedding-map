@@ -36,21 +36,7 @@
 
       systems = [ "x86_64-linux" ];
 
-      perSystem = { config, self', inputs', pkgs, system, ... }:
-        let
-          ps = pkgs.python311Packages;
-          spacy-en-core-web-sm = ps.buildPythonPackage rec {
-            pname = "en_core_web_sm";
-            version = "3.7.1";
-            src = fetchTarball {
-              url =
-                "https://github.com/explosion/spacy-models/releases/download/${pname}-${version}/${pname}-${version}.tar.gz";
-              sha256 = "sha256:10mvc8masb60zsq8mraxc032xab83v4vg23lb3ff1dwbpf67w316";
-            };
-            buildInputs = [ ps.spacy ];
-          };
-        in
-        {
+      perSystem = { config, self', inputs', pkgs, system, ... }: {
           # This sets `pkgs` to a nixpkgs with allowUnfree option set.
           _module.args.pkgs = import nixpkgs {
             inherit system;
@@ -75,25 +61,41 @@
 
             languages.python = {
               enable = true;
-              package = (pkgs.python311.withPackages (_: [
-                ps.numpy
-                # ps.finalfusion
-                # ps.wn
-                ps.pip
-                ps.pytest
-                spacy-en-core-web-sm
-              ]));
+              # package = (pkgs.python3.withPackages (ps: [
+              #   ps.numpy
+              #   ps.finalfusion
+              #   ps.wn
+              #   ps.pip
+              #   ps.pytest
+              #   ps.tqdm
+              #   ps.spacy
+              #   #ps.spacy-models.en_core_web_sm
+              #   ps.spacy_lookups_data
+              # ]));
               venv = {
                 enable = true;
                 quiet = false;
                 requirements = ''
-                  spacy
                 '';
               };
             };
 
             packages = [
               # (pkgs.ollama.override { acceleration = "cuda"; })
+
+              pkgs.python311Packages.numpy
+              pkgs.python311Packages.finalfusion
+              pkgs.python311Packages.wn
+              pkgs.python311Packages.pip
+              pkgs.python311Packages.pytest
+              pkgs.python311Packages.tqdm
+              pkgs.python311Packages.spacy
+              pkgs.python311Packages.spacy-models.en_core_web_sm
+              pkgs.python311Packages.spacy-lookups-data
+
+              # Load the model here as it has package dependencies not picked up in the custom Python build
+              # pkgs.python311Packages.spacy-models.en_core_web_sm
+              pkgs.zlib
             ];
 
             dotenv.disableHint = true;
@@ -107,6 +109,7 @@
             # buildInputs = [ pkgs.python311 ];
 
             enterShell = ''
+              export LD_LIBRARY_PATH=${pkgs.stdenv.cc.cc.lib}/lib/:${pkgs.zlib}/lib:$LD_LIBRARY_PATH
           '';
           };
 
