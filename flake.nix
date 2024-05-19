@@ -37,6 +37,19 @@
       systems = [ "x86_64-linux" ];
 
       perSystem = { config, self', inputs', pkgs, system, ... }:
+        let
+          ps = pkgs.python311Packages;
+          spacy-en-core-web-sm = ps.buildPythonPackage rec {
+            pname = "en_core_web_sm";
+            version = "3.7.1";
+            src = fetchTarball {
+              url =
+                "https://github.com/explosion/spacy-models/releases/download/${pname}-${version}/${pname}-${version}.tar.gz";
+              sha256 = "sha256:10mvc8masb60zsq8mraxc032xab83v4vg23lb3ff1dwbpf67w316";
+            };
+            buildInputs = [ ps.spacy ];
+          };
+        in
         {
           # This sets `pkgs` to a nixpkgs with allowUnfree option set.
           _module.args.pkgs = import nixpkgs {
@@ -62,20 +75,19 @@
 
             languages.python = {
               enable = true;
-              package = (pkgs.python311.withPackages (ps: [
-                # ps.cupy
-                # crew-ai
+              package = (pkgs.python311.withPackages (_: [
                 ps.numpy
-                ps.finalfusion
-                ps.wn
+                # ps.finalfusion
+                # ps.wn
                 ps.pip
                 ps.pytest
-                ps.python-dotenv
+                spacy-en-core-web-sm
               ]));
               venv = {
                 enable = true;
-                quiet = true;
+                quiet = false;
                 requirements = ''
+                  spacy
                 '';
               };
             };
